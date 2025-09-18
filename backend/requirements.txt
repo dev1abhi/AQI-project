@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+pandas
+numpy
+matplotlib
+prophet
+opencv-python-headless
+python-multipart
+plotly
