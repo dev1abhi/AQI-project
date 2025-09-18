@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 
+//TODO: SET alerts in results display by user. (user will give number and if predicted aqi > number, alert will be sent to his sms)
+
 function Result({ result }) {
   const [copied, setCopied] = useState(false);
 
