@@ -1,6 +1,6 @@
 // components/Result.js
 import React, { useState } from "react";
-import CurrentConditions from "./resultComponents/currentConditions";
+import CurrentConditions from "./resultComponents/CurrentConditions";
 import ForecastTable from "./resultComponents/ForecastTable";
 import Statistics from "./resultComponents/Statistics";
 import HealthRecommendations from "./resultComponents/HealthRecommendations";
