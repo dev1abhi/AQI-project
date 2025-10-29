@@ -2,16 +2,16 @@
 
 A comprehensive Air Quality Index (AQI) prediction and visualization application that combines time-series forecasting with intelligent image processing and AI-powered visualization generation.
 
-## 🌟 Features
+## Features
 
-- **📊 AQI Prediction**: Uses Facebook Prophet for 30-day AQI forecasting based on historical PM2.5 data
-- **🖼️ Smart Image Processing**: Applies dynamic haze overlays to reference images based on predicted pollution levels
-- **🤖 AI Visualization**: Generates prompts for Google Gemini to create realistic smog visualizations
-- **📱 Modern Web Interface**: Clean, responsive React frontend with dark mode design
-- **⚡ Fast API Backend**: High-performance FastAPI server with real-time processing
-- **📈 Interactive Results**: Tabular prediction data with visual haze intensity indicators
+- **AQI Prediction**: Uses Facebook Prophet for 30-day AQI forecasting based on historical PM2.5 data
+- **Smart Image Processing**: Applies dynamic haze overlays to reference images based on predicted pollution levels
+- **AI Visualization**: Generates prompts for Google Gemini to create realistic smog visualizations
+- **Modern Web Interface**: Clean, responsive React frontend with dark mode design
+- **Fast API Backend**: High-performance FastAPI server with real-time processing
+- **Interactive Results**: Tabular prediction data with visual haze intensity indicators
 
-## 🏗️ Architecture
+## Architecture
 
 ### Frontend (React + Vite)
 - **Framework**: React 19 with Vite for fast development
@@ -26,7 +26,7 @@ A comprehensive Air Quality Index (AQI) prediction and visualization application
 - **Data Processing**: Pandas for CSV data handling
 - **Visualization**: Matplotlib and Plotly for data visualization
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 - Node.js 18+ and npm
@@ -83,7 +83,7 @@ A comprehensive Air Quality Index (AQI) prediction and visualization application
    uvicorn app.main:app --host 0.0.0.0 --port 8000
    ```
 
-## 📊 Usage
+## Usage
 
 ### Data Format Requirements
 
@@ -119,7 +119,7 @@ date,pm25
    - Access AI-generated visualization prompts for Google Gemini
    - Copy prompts to generate realistic smog visualizations
 
-## 🧮 AQI Calculation & Haze Mapping
+## AQI Calculation & Haze Mapping
 
 The application uses the following AQI to haze intensity mapping:
 
@@ -132,7 +132,7 @@ The application uses the following AQI to haze intensity mapping:
 | 301-400   | Hazardous   | 140            | Very heavy haze |
 | 400+      | Extremely Hazardous | 180    | Maximum haze |
 
-## 🛠️ Development
+## Development
 
 ### Frontend Development
 ```bash
@@ -188,7 +188,7 @@ AQI-project/
 └── README.md                     # This file
 ```
 
-## 🔧 API Endpoints
+## API Endpoints
 
 ### POST `/process`
 Processes uploaded CSV and image files to generate AQI predictions.
@@ -218,7 +218,7 @@ Downloads the generated haze-overlaid image.
 
 **Response:** JPEG image file
 
-## 🎯 Future Enhancements
+## Future Enhancements
 
 - [ ] SMS/Email alerts for high AQI predictions
 - [ ] Historical data visualization charts
@@ -228,7 +228,7 @@ Downloads the generated haze-overlaid image.
 - [ ] API key integration for AI services
 - [ ] Mobile application development
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
@@ -255,15 +255,15 @@ Downloads the generated haze-overlaid image.
 4. Push to branch: `git push origin feature-name`
 5. Submit a Pull Request
 
-## 📄 License
+## License
 
 This project is open source and available under the [MIT License](LICENSE).
 
-## 👨‍💻 Author
+## 👨Author
 
 **dev1abhi** - [GitHub Profile](https://github.com/dev1abhi)
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - **Facebook Prophet** for time-series forecasting capabilities
 - **FastAPI** for high-performance API framework
