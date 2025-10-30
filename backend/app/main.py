@@ -428,7 +428,7 @@ async def analyze_air_quality(
         }
         
         # ============================
-        # STEP 4: Multi-Parameter Analysis
+        # STEP 4: Multi-Parameter Analysis and finds the max aqi pollutant
         # ============================
         
         multi_parameter_analysis = {}
@@ -450,10 +450,10 @@ async def analyze_air_quality(
         aqi_breakdown = calculate_detailed_aqi(current_concentrations)
         max_aqi_pollutant = max(aqi_breakdown, key=aqi_breakdown.get) if aqi_breakdown else 'pm25'
         max_aqi_value = aqi_breakdown.get(max_aqi_pollutant, predicted_aqi)
-        
-        # ============================
+
+        # ====================================
         # STEP 5: Generate 30-Day Predictions
-        # ============================
+        # ====================================
         
         future_forecast = forecast.tail(30)
         predictions = []

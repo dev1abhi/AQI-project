@@ -4,7 +4,7 @@ function MultiParameterAnalysis({ data, breakdown, primary }) {
   if (!data && !breakdown) {
     return (
       <div className="bg-gray-700/30 p-6 rounded-lg">
-        <h4 className="font-medium text-gray-300 mb-4">Multi-Parameter Analysis</h4>
+        <h4 className="font-medium text-gray-300 mb-4">Multi-Parameter Analysis for next 30 days</h4>
         <p className="text-gray-400">Only PM2.5 data available in the dataset.</p>
       </div>
     );
