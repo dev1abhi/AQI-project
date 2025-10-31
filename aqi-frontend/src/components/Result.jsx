@@ -1,5 +1,6 @@
 // components/Result.js
 import React, { useState } from "react";
+import { LayoutDashboard, TrendingUp, Heart, FlaskConical, BarChart3, Bot, Clipboard, ClipboardCheck, Sparkles, ExternalLink } from "lucide-react";
 import CurrentConditions from "./resultComponents/CurrentConditions";
 import ForecastTable from "./resultComponents/ForecastTable";
 import Statistics from "./resultComponents/Statistics";
@@ -20,12 +21,12 @@ function Result({ result }) {
   };
 
   const tabs = [
-    { id: "overview", label: "Overview", icon: "📊" },
-    { id: "forecast", label: "Forecast", icon: "🔮" },
-    { id: "health", label: "Health", icon: "🏥" },
-    { id: "analysis", label: "Analysis", icon: "🔬" },
-    { id: "visuals", label: "Charts", icon: "📈" },
-    { id: "model", label: "Model", icon: "🤖" },
+    { id: "overview", label: "Overview", IconComponent: LayoutDashboard },
+    { id: "forecast", label: "Forecast", IconComponent: TrendingUp },
+    { id: "health", label: "Health", IconComponent: Heart },
+    { id: "analysis", label: "Analysis", IconComponent: FlaskConical },
+    { id: "visuals", label: "Charts", IconComponent: BarChart3 },
+    { id: "model", label: "Model", IconComponent: Bot },
   ];
 
   if (!result || result.status !== "success") {
@@ -95,20 +96,23 @@ function Result({ result }) {
       <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl border border-gray-700/50 overflow-hidden">
         <div className="border-b border-gray-700/50">
           <nav className="flex space-x-0">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 px-4 py-3 text-sm font-medium transition-colors duration-200 ${
-                  activeTab === tab.id
-                    ? "bg-teal-600 text-white"
-                    : "text-gray-400 hover:text-gray-200 hover:bg-gray-700/50"
-                }`}
-              >
-                <span className="hidden sm:inline">{tab.label}</span>
-                <span className="sm:hidden">{tab.icon}</span>
-              </button>
-            ))}
+            {tabs.map((tab) => {
+              const Icon = tab.IconComponent;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex-1 px-4 py-3 text-sm font-medium transition-colors duration-200 flex items-center justify-center gap-2 ${
+                    activeTab === tab.id
+                      ? "bg-teal-600 text-white"
+                      : "text-gray-400 hover:text-gray-200 hover:bg-gray-700/50"
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  <span className="hidden sm:inline">{tab.label}</span>
+                </button>
+              );
+            })}
           </nav>
         </div>
 
@@ -156,9 +160,12 @@ function Result({ result }) {
       {/* AI Generation Section */}
       {result.ai_generation?.gemini_url && (
         <div className="bg-gradient-to-r from-purple-900/20 to-blue-900/20 border border-purple-500/30 rounded-2xl p-6">
-          <h3 className="text-xl font-bold text-purple-400 mb-4">
-            🤖 AI-Generated Visualization
-          </h3>
+          <div className="flex items-center gap-2 mb-4">
+            <Sparkles className="w-6 h-6 text-purple-400" />
+            <h3 className="text-xl font-bold text-purple-400">
+              AI-Generated Visualization
+            </h3>
+          </div>
 
           <div className="flex flex-col sm:flex-row gap-4">
             <a
@@ -167,29 +174,28 @@ function Result({ result }) {
               rel="noopener noreferrer"
               className="flex-1 inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105"
             >
-              <span>🎨 Generate AI Visualization</span>
-              <svg
-                className="w-5 h-5 ml-2"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-2M17 8l4 4m0 0l-4 4m4-4H3"
-                />
-              </svg>
+              <Sparkles className="w-5 h-5 mr-2" />
+              <span>Generate AI Visualization</span>
+              <ExternalLink className="w-4 h-4 ml-2" />
             </a>
 
             {result.ai_generation.prompt && (
               <button
                 onClick={handleCopy}
-                className="px-4 py-3 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg transition-colors duration-200"
+                className="px-4 py-3 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg transition-colors duration-200 inline-flex items-center justify-center gap-2"
                 title="Copy prompt"
               >
-                {copied ? "✅ Copied!" : "📋 Copy Prompt"}
+                {copied ? (
+                  <>
+                    <ClipboardCheck className="w-4 h-4" />
+                    <span>Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <Clipboard className="w-4 h-4" />
+                    <span>Copy Prompt</span>
+                  </>
+                )}
               </button>
             )}
           </div>
