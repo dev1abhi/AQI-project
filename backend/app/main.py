@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -17,16 +17,219 @@ from typing import Dict, List, Optional, Tuple
 import json
 from urllib.parse import quote_plus
 import logging
+import shutil
+import psutil
 
 warnings.filterwarnings('ignore')
 
+# Configure logging for disk space monitoring
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
 app = FastAPI(title="Air Quality Analysis API", version="2.0.0")
+
+# ================================
+# GLOBAL EXCEPTION HANDLER
+# ================================
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Global exception handler to prevent server crashes"""
+    logger.error(f"Unhandled exception: {str(exc)}", exc_info=True)
+    
+    # Try to return a structured error response
+    try:
+        return JSONResponse(
+            status_code=500,
+            content={
+                "status": "error",
+                "timestamp": datetime.now().isoformat(),
+                "error": "Internal server error",
+                "detail": "An unexpected error occurred. Please try again.",
+                "path": str(request.url)
+            }
+        )
+    except Exception as e:
+        # Absolute last resort
+        logger.error(f"Failed to create global error response: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={"status": "error", "message": "Critical error"}
+        )
+
+# ================================
+# DISK SPACE MONITORING FUNCTIONS
+# ================================
+
+def get_disk_space_info():
+    """Get comprehensive disk space information for the Render instance"""
+    try:
+        # Get disk usage for the current directory (root filesystem in most containers)
+        statvfs = shutil.disk_usage('/')
+        
+        total_space = statvfs.total
+        used_space = statvfs.used
+        free_space = statvfs.free
+        
+        # Convert bytes to human readable format
+        def bytes_to_human_readable(bytes_value):
+            for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
+                if bytes_value < 1024.0:
+                    return f"{bytes_value:.2f} {unit}"
+                bytes_value /= 1024.0
+            return f"{bytes_value:.2f} PB"
+        
+        usage_percentage = (used_space / total_space) * 100
+        
+        disk_info = {
+            "total_space": bytes_to_human_readable(total_space),
+            "used_space": bytes_to_human_readable(used_space),
+            "free_space": bytes_to_human_readable(free_space),
+            "usage_percentage": f"{usage_percentage:.2f}%",
+            "raw_bytes": {
+                "total": total_space,
+                "used": used_space,
+                "free": free_space
+            }
+        }
+        
+        return disk_info
+        
+    except Exception as e:
+        logger.error(f"Error getting disk space info: {str(e)}")
+        return {"error": str(e)}
+
+def get_memory_info():
+    """Get memory usage information"""
+    try:
+        # Get memory usage using psutil if available, otherwise use basic methods
+        try:
+            import psutil
+            memory = psutil.virtual_memory()
+            memory_info = {
+                "total_memory": f"{memory.total / (1024**3):.2f} GB",
+                "available_memory": f"{memory.available / (1024**3):.2f} GB",
+                "used_memory": f"{memory.used / (1024**3):.2f} GB",
+                "memory_percentage": f"{memory.percent:.2f}%"
+            }
+        except ImportError:
+            # Fallback method without psutil
+            with open('/proc/meminfo', 'r') as f:
+                meminfo = f.read()
+            
+            total_mem = 0
+            free_mem = 0
+            available_mem = 0
+            
+            for line in meminfo.split('\n'):
+                if 'MemTotal:' in line:
+                    total_mem = int(line.split()[1]) * 1024  # Convert KB to bytes
+                elif 'MemFree:' in line:
+                    free_mem = int(line.split()[1]) * 1024
+                elif 'MemAvailable:' in line:
+                    available_mem = int(line.split()[1]) * 1024
+            
+            used_mem = total_mem - available_mem if available_mem else total_mem - free_mem
+            usage_percentage = (used_mem / total_mem) * 100 if total_mem > 0 else 0
+            
+            memory_info = {
+                "total_memory": f"{total_mem / (1024**3):.2f} GB",
+                "available_memory": f"{available_mem / (1024**3):.2f} GB",
+                "used_memory": f"{used_mem / (1024**3):.2f} GB",
+                "memory_percentage": f"{usage_percentage:.2f}%"
+            }
+        
+        return memory_info
+        
+    except Exception as e:
+        logger.error(f"Error getting memory info: {str(e)}")
+        return {"error": str(e)}
+
+def log_system_resources():
+    """Log comprehensive system resource information"""
+    logger.info("=" * 60)
+    logger.info("RENDER INSTANCE SYSTEM RESOURCES")
+    logger.info("=" * 60)
+    
+    # Log disk space
+    disk_info = get_disk_space_info()
+    if "error" not in disk_info:
+        logger.info("DISK SPACE INFORMATION:")
+        logger.info(f"  Total Space: {disk_info['total_space']}")
+        logger.info(f"  Used Space:  {disk_info['used_space']}")
+        logger.info(f"  Free Space:  {disk_info['free_space']}")
+        logger.info(f"  Usage:       {disk_info['usage_percentage']}")
+    else:
+        logger.error(f"Disk space error: {disk_info['error']}")
+    
+    # Log memory usage
+    memory_info = get_memory_info()
+    if "error" not in memory_info:
+        logger.info("MEMORY INFORMATION:")
+        logger.info(f"  Total Memory:     {memory_info['total_memory']}")
+        logger.info(f"  Available Memory: {memory_info['available_memory']}")
+        logger.info(f"  Used Memory:      {memory_info['used_memory']}")
+        logger.info(f"  Usage:            {memory_info['memory_percentage']}")
+    else:
+        logger.error(f"Memory info error: {memory_info['error']}")
+    
+    # Log additional system info
+    try:
+        import os
+        logger.info("ENVIRONMENT INFORMATION:")
+        logger.info(f"  Python Version: {os.sys.version}")
+        logger.info(f"  Current Working Directory: {os.getcwd()}")
+        logger.info(f"  Process ID: {os.getpid()}")
+        
+        # Check if we're running on Render
+        render_service = os.getenv('RENDER_SERVICE_NAME', 'Not set')
+        render_instance = os.getenv('RENDER_INSTANCE_ID', 'Not set')
+        logger.info(f"  Render Service: {render_service}")
+        logger.info(f"  Render Instance: {render_instance}")
+        
+    except Exception as e:
+        logger.error(f"Error getting environment info: {str(e)}")
+    
+    logger.info("=" * 60)
+
+# Initialize and log system resources when the app starts
+log_system_resources()
+
+# Periodic logging function (can be called periodically)
+def periodic_system_check():
+    """Periodic system resource check - can be called by external scheduler"""
+    logger.info("Periodic system resource check:")
+    disk_info = get_disk_space_info()
+    memory_info = get_memory_info()
+    
+    if "error" not in disk_info:
+        logger.info(f"Disk Usage: {disk_info['usage_percentage']} ({disk_info['free_space']} free)")
+    
+    if "error" not in memory_info:
+        logger.info(f"Memory Usage: {memory_info['memory_percentage']}")
+    
+    # Check for low disk space warning (less than 1GB free)
+    if "error" not in disk_info and disk_info['raw_bytes']['free'] < 1024**3:
+        logger.warning("⚠️  LOW DISK SPACE WARNING: Less than 1GB free space remaining!")
+    
+    # Check for high memory usage (more than 90%)
+    if "error" not in memory_info:
+        try:
+            mem_usage = float(memory_info['memory_percentage'].replace('%', ''))
+            if mem_usage > 90:
+                logger.warning(f"⚠️  HIGH MEMORY USAGE WARNING: {mem_usage}% memory usage!")
+        except:
+            pass
 
 # CORS setup
 origins = [
     "http://localhost:3000",
     "http://localhost:5173",
     "https://aqi-app-frontend.onrender.com",
+    "https://aqi-project-rose.vercel.app",
     "*",
 ]
 
@@ -73,6 +276,65 @@ def classify_aqi(aqi_value: float) -> Tuple[str, str]:
         return "Very Unhealthy", "#8f3f97"
     else:
         return "Hazardous", "#7e0023"
+
+def safe_float(value, default=0.0):
+    """Convert value to float, handling NaN, inf, and None values safely"""
+    try:
+        if value is None:
+            return default
+        
+        # Convert to float
+        float_val = float(value)
+        
+        # Check for NaN or infinite values
+        if np.isnan(float_val) or np.isinf(float_val):
+            return default
+            
+        return float_val
+    except (ValueError, TypeError, OverflowError):
+        return default
+
+def clean_response_data(data):
+    """Recursively clean response data to remove NaN, inf, and None values"""
+    if isinstance(data, dict):
+        return {k: clean_response_data(v) for k, v in data.items()}
+    elif isinstance(data, list):
+        return [clean_response_data(item) for item in data]
+    elif isinstance(data, float):
+        return safe_float(data)
+    else:
+        return data
+
+def safe_series_stats(series, default=0.0):
+    """Calculate statistics from pandas series, handling NaN values safely"""
+    if series is None or len(series) == 0:
+        return {
+            "mean": default,
+            "median": default,
+            "max": default,
+            "min": default,
+            "std": default
+        }
+    
+    # Drop NaN values for calculations
+    clean_series = series.dropna()
+    
+    if len(clean_series) == 0:
+        return {
+            "mean": default,
+            "median": default, 
+            "max": default,
+            "min": default,
+            "std": default
+        }
+    
+    return {
+        "mean": safe_float(clean_series.mean(), default),
+        "median": safe_float(clean_series.median(), default),
+        "max": safe_float(clean_series.max(), default),
+        "min": safe_float(clean_series.min(), default),
+        "std": safe_float(clean_series.std(), default)
+    }
 
 def aqi_to_haze_intensity(aqi: float) -> int:
     """Convert AQI to haze intensity (0-200)"""
@@ -175,6 +437,8 @@ def get_detailed_health_recommendations(aqi_value: float) -> Dict[str, str]:
 
 def calculate_detailed_aqi(pollutant_concentrations: Dict[str, float]) -> Dict[str, int]:
     """Calculate detailed AQI for multiple pollutants using EPA breakpoints"""
+    # EPA breakpoints are the concentration thresholds for specific air pollutants that define
+    # the different levels of the Air Quality Index (AQI), such as "Good," "Moderate," and "Unhealthy"
     breakpoints = {
         'pm25': [(0.0, 12.0, 0, 50), (12.1, 35.4, 51, 100), (35.5, 55.4, 101, 150),
                  (55.5, 150.4, 151, 200), (150.5, 250.4, 201, 300), (250.5, 500.4, 301, 500)],
@@ -212,6 +476,9 @@ def calculate_detailed_aqi(pollutant_concentrations: Dict[str, float]) -> Dict[s
 
 def create_forecast_plot(aqi_df: pd.DataFrame, forecast: pd.DataFrame, predicted_aqi: float) -> str:
     """Create comprehensive forecast visualization and return base64 encoded image"""
+    # Ensure predicted_aqi is safe for visualization
+    predicted_aqi = safe_float(predicted_aqi)
+    
     plt.style.use('seaborn-v0_8')
     fig, axes = plt.subplots(2, 2, figsize=(15, 10))
     
@@ -275,6 +542,9 @@ def create_forecast_plot(aqi_df: pd.DataFrame, forecast: pd.DataFrame, predicted
 #image visualisation
 def create_aqi_gauge(predicted_aqi: float, aqi_category: str) -> str:
     """Create AQI gauge visualization and return base64 encoded image"""
+    # Ensure predicted_aqi is safe for visualization
+    predicted_aqi = safe_float(predicted_aqi)
+    
     fig, ax = plt.subplots(figsize=(8, 6), subplot_kw=dict(projection='polar'))
     
     # AQI color zones
@@ -340,109 +610,225 @@ async def analyze_air_quality(
     Comprehensive air quality analysis with forecasting and visualization
     """
     try:
+        logger.info("Starting analysis request")
+        
         # ============================
         # STEP 1: Load and Process Data
         # ============================
         
-        # Read CSV data
-        df = pd.read_csv(dataset.file)
-        df.columns = df.columns.str.strip()
-        
-        # Automatically detect columns
-        date_names = ['date', 'datetime', 'timestamp', 'time']
-        pm25_names = ['pm25', 'pm2.5', 'pm_25', 'aqi', 'pm25_avg']
-        
-        date_col = find_column(df, date_names)
-        pm25_col = find_column(df, pm25_names)
-        
-        if not date_col or not pm25_col:
+        try:
+            # Read CSV data
+            df = pd.read_csv(dataset.file)
+            df.columns = df.columns.str.strip()
+            logger.info(f"Successfully loaded dataset with {len(df)} rows and columns: {df.columns.tolist()}")
+        except Exception as e:
+            logger.error(f"Error reading CSV file: {str(e)}")
             raise HTTPException(
                 status_code=400,
-                detail=f"Required columns not found. Available: {df.columns.tolist()}"
+                detail=f"Error reading CSV file: {str(e)}. Please ensure the file is a valid CSV format."
             )
         
-        # Detect additional parameters
-        additional_params = {}
-        param_names = {
-            'pm10': ['pm10', 'pm_10'],
-            'o3': ['o3', 'ozone'],
-            'no2': ['no2', 'nitrogen_dioxide'],
-            'so2': ['so2', 'sulfur_dioxide'],
-            'co': ['co', 'carbon_monoxide']
-        }
-        
-        for param, names in param_names.items():
-            col = find_column(df, names)
-            if col:
-                additional_params[param] = col
-        
-        # Parse dates
         try:
-            df[date_col] = pd.to_datetime(df[date_col], dayfirst=True, errors='coerce')
-        except:
-            df[date_col] = pd.to_datetime(df[date_col], errors='coerce')
+            # Automatically detect columns
+            date_names = ['date', 'datetime', 'timestamp', 'time']
+            pm25_names = ['pm25', 'pm2.5', 'pm_25', 'aqi', 'pm25_avg']
+            
+            date_col = find_column(df, date_names)
+            pm25_col = find_column(df, pm25_names)
+            
+            if not date_col or not pm25_col:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Required columns not found. Available: {df.columns.tolist()}. Please ensure your CSV has date and PM2.5/AQI columns."
+                )
+            
+            logger.info(f"Detected columns - Date: {date_col}, PM2.5: {pm25_col}")
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Error detecting columns: {str(e)}")
+            raise HTTPException(
+                status_code=400,
+                detail=f"Error processing CSV columns: {str(e)}"
+            )
         
-        # Prepare data for Prophet
-        aqi_df = df[[date_col, pm25_col]].rename(columns={date_col:'ds', pm25_col:'y'})
-        aqi_df['y'] = pd.to_numeric(aqi_df['y'], errors='coerce')
-        aqi_df = aqi_df.dropna()
+        try:
+            # Detect additional parameters
+            additional_params = {}
+            param_names = {
+                'pm10': ['pm10', 'pm_10'],
+                'o3': ['o3', 'ozone'],
+                'no2': ['no2', 'nitrogen_dioxide'],
+                'so2': ['so2', 'sulfur_dioxide'],
+                'co': ['co', 'carbon_monoxide']
+            }
+            
+            for param, names in param_names.items():
+                col = find_column(df, names)
+                if col:
+                    additional_params[param] = col
+            
+            logger.info(f"Additional parameters detected: {additional_params}")
+        except Exception as e:
+            logger.warning(f"Error detecting additional parameters: {str(e)}")
+            additional_params = {}
+        
+        try:
+            # Parse dates
+            try:
+                df[date_col] = pd.to_datetime(df[date_col], dayfirst=True, errors='coerce')
+            except:
+                df[date_col] = pd.to_datetime(df[date_col], errors='coerce')
+            
+            # Prepare data for Prophet
+            aqi_df = df[[date_col, pm25_col]].rename(columns={date_col:'ds', pm25_col:'y'})
+            aqi_df['y'] = pd.to_numeric(aqi_df['y'], errors='coerce')
+            aqi_df = aqi_df.dropna()
+            
+            # Sort by date to ensure chronological order (important for getting latest values)
+            aqi_df = aqi_df.sort_values('ds').reset_index(drop=True)
+            
+            if len(aqi_df) == 0:
+                raise HTTPException(
+                    status_code=400,
+                    detail="No valid data found after processing. Please check your date and PM2.5 columns for valid values."
+                )
+            
+            logger.info(f"Processed {len(aqi_df)} valid data points")
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Error processing date/PM2.5 data: {str(e)}")
+            raise HTTPException(
+                status_code=400,
+                detail=f"Error processing date and PM2.5 data: {str(e)}"
+            )
         
         # ============================
         # STEP 2: Forecasting with Prophet
         # ============================
         
-        model = Prophet(daily_seasonality=True, yearly_seasonality=True)
-        model.fit(aqi_df)
-        
-        # Forecast next 30 days
-        future = model.make_future_dataframe(periods=30)
-        forecast = model.predict(future)
-        
-        predicted_aqi = forecast.iloc[-1]['yhat']
-        aqi_category, aqi_color = classify_aqi(predicted_aqi)
+        try:
+            logger.info("Starting Prophet forecasting")
+            model = Prophet(daily_seasonality=True, yearly_seasonality=True)
+            model.fit(aqi_df)
+            
+            # Forecast next 30 days
+            future = model.make_future_dataframe(periods=30)
+            forecast = model.predict(future)
+            
+            predicted_aqi = safe_float(forecast.iloc[-1]['yhat'])
+            aqi_category, aqi_color = classify_aqi(predicted_aqi)
+            
+            # Calculate model evaluation metrics
+            # Get predictions for historical data
+            historical_forecast = forecast[forecast['ds'].isin(aqi_df['ds'])]
+            actual_values = aqi_df['y'].values
+            predicted_values = historical_forecast['yhat'].values
+            
+            # Calculate metrics
+            from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+            
+            mae = safe_float(mean_absolute_error(actual_values, predicted_values))
+            mse = safe_float(mean_squared_error(actual_values, predicted_values))
+            rmse = safe_float(np.sqrt(mse))
+            r2 = safe_float(r2_score(actual_values, predicted_values))
+            
+            # Calculate MAPE (Mean Absolute Percentage Error)
+            mape = safe_float(np.mean(np.abs((actual_values - predicted_values) / actual_values)) * 100)
+            
+            model_metrics = {
+                "mae": mae,  # Mean Absolute Error
+                "mse": mse,  # Mean Squared Error
+                "rmse": rmse,  # Root Mean Squared Error
+                "r2_score": r2,  # R-squared score (coefficient of determination)
+                "mape": mape,  # Mean Absolute Percentage Error (%)
+                "accuracy_percentage": safe_float(100 - mape) if mape < 100 else 0.0
+            }
+            
+            logger.info(f"Forecasting completed. Predicted AQI: {predicted_aqi}, R²: {r2:.4f}, RMSE: {rmse:.2f}")
+        except Exception as e:
+            logger.error(f"Error in Prophet forecasting: {str(e)}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error in forecasting model: {str(e)}. Please check your data quality and try again."
+            )
         
         # ============================
         # STEP 3: Statistical Analysis
         # ============================
         
-        recent_data = aqi_df.tail(30)['y']
-        trend_slope = (recent_data.iloc[-1] - recent_data.iloc[0]) / len(recent_data) if len(recent_data) > 1 else 0
-        trend_direction = "Worsening" if trend_slope > 1 else "Improving" if trend_slope < -1 else "Stable"
-        
-        statistics = {
-            "total_records": len(aqi_df),
-            "date_range": {
-                "start": aqi_df['ds'].min().strftime('%Y-%m-%d'),
-                "end": aqi_df['ds'].max().strftime('%Y-%m-%d')
-            },
-            "recent_30_days": {
-                "average": float(recent_data.mean()),
-                "median": float(recent_data.median()),
-                "maximum": float(recent_data.max()),
-                "minimum": float(recent_data.min()),
-                "std_dev": float(recent_data.std()),
-                "days_above_safe": int(sum(recent_data > 50)),
-                "trend_direction": trend_direction,
-                "trend_slope": float(trend_slope)
+        try:
+            logger.info("Calculating statistics")
+            # Get the most recent 30 data points (already sorted chronologically)
+            recent_data = aqi_df.tail(30)['y']
+            # Calculate trend from oldest to newest in the recent period
+            trend_slope = safe_float((recent_data.iloc[-1] - recent_data.iloc[0]) / len(recent_data) if len(recent_data) > 1 else 0)
+            trend_direction = "Worsening" if trend_slope > 1 else "Improving" if trend_slope < -1 else "Stable"
+            
+            # Calculate safe statistics
+            stats = safe_series_stats(recent_data)
+            
+            statistics = {
+                "total_records": len(aqi_df),
+                "date_range": {
+                    "start": aqi_df['ds'].min().strftime('%Y-%m-%d'),
+                    "end": aqi_df['ds'].max().strftime('%Y-%m-%d')
+                },
+                "recent_30_days": {
+                    "average": stats["mean"],
+                    "median": stats["median"],
+                    "maximum": stats["max"],
+                    "minimum": stats["min"],
+                    "std_dev": stats["std"],
+                    "days_above_safe": int(sum(recent_data > 50)) if len(recent_data) > 0 else 0,
+                    "trend_direction": trend_direction,
+                    "trend_slope": trend_slope
+                }
             }
-        }
+            logger.info("Statistics calculated successfully")
+        except Exception as e:
+            logger.error(f"Error calculating statistics: {str(e)}")
+            # Provide default statistics in case of error
+            statistics = {
+                "total_records": len(aqi_df) if 'aqi_df' in locals() else 0,
+                "date_range": {
+                    "start": "N/A",
+                    "end": "N/A"
+                },
+                "recent_30_days": {
+                    "average": 0.0,
+                    "median": 0.0,
+                    "maximum": 0.0,
+                    "minimum": 0.0,
+                    "std_dev": 0.0,
+                    "days_above_safe": 0,
+                    "trend_direction": "Unknown",
+                    "trend_slope": 0.0
+                }
+            }
         
         # ============================
-        # STEP 4: Multi-Parameter Analysis and finds the max aqi pollutant
+        # STEP 4: Multi-Parameter Analysis
         # ============================
         
         multi_parameter_analysis = {}
-        current_concentrations = {'pm25': float(aqi_df['y'].iloc[-1])}
+        current_concentrations = {'pm25': safe_float(aqi_df['y'].iloc[-1])}
         
         if additional_params:
+            # Sort the original dataframe by date to get chronologically latest values
+            df_sorted = df.sort_values(date_col).reset_index(drop=True)
+            
             for param, col in additional_params.items():
-                param_data = pd.to_numeric(df[col], errors='coerce')
+                param_data = pd.to_numeric(df_sorted[col], errors='coerce')
                 if not param_data.isna().all():
-                    latest_value = float(param_data.dropna().iloc[-1])
+                    # Get the latest non-null value in chronological order
+                    latest_value = safe_float(param_data.dropna().iloc[-1])
                     current_concentrations[param] = latest_value
+                    avg_30_days = safe_float(param_data.tail(30).mean()) if len(param_data) >= 30 else latest_value
                     multi_parameter_analysis[param] = {
                         "latest_value": latest_value,
-                        "average_30_days": float(param_data.tail(30).mean()) if len(param_data) >= 30 else latest_value,
+                        "average_30_days": avg_30_days,
                         "unit": "μg/m³" if param != 'co' else "mg/m³"
                     }
         
@@ -450,16 +836,16 @@ async def analyze_air_quality(
         aqi_breakdown = calculate_detailed_aqi(current_concentrations)
         max_aqi_pollutant = max(aqi_breakdown, key=aqi_breakdown.get) if aqi_breakdown else 'pm25'
         max_aqi_value = aqi_breakdown.get(max_aqi_pollutant, predicted_aqi)
-
-        # ====================================
+        
+        # ============================
         # STEP 5: Generate 30-Day Predictions
-        # ====================================
+        # ============================
         
         future_forecast = forecast.tail(30)
         predictions = []
         
         for _, row in future_forecast.iterrows():
-            daily_aqi = float(row['yhat'])
+            daily_aqi = safe_float(row['yhat'])
             daily_category, daily_color = classify_aqi(daily_aqi)
             haze_intensity = aqi_to_haze_intensity(daily_aqi)
             
@@ -469,8 +855,8 @@ async def analyze_air_quality(
                 "category": daily_category,
                 "color": daily_color,
                 "haze_intensity": haze_intensity,
-                "confidence_lower": float(row['yhat_lower']),
-                "confidence_upper": float(row['yhat_upper'])
+                "confidence_lower": safe_float(row['yhat_lower']),
+                "confidence_upper": safe_float(row['yhat_upper'])
             })
         
         # ============================
@@ -526,8 +912,16 @@ async def analyze_air_quality(
         # STEP 8: Generate Visualizations
         # ============================
         
-        forecast_plot = create_forecast_plot(aqi_df, forecast, predicted_aqi)
-        aqi_gauge = create_aqi_gauge(predicted_aqi, aqi_category)
+        try:
+            logger.info("Generating visualizations")
+            forecast_plot = create_forecast_plot(aqi_df, forecast, predicted_aqi)
+            aqi_gauge = create_aqi_gauge(predicted_aqi, aqi_category)
+            logger.info("Visualizations generated successfully")
+        except Exception as e:
+            logger.error(f"Error generating visualizations: {str(e)}")
+            # Provide empty visualizations in case of error
+            forecast_plot = ""
+            aqi_gauge = ""
         
         # ============================
         # STEP 9: Construct Response
@@ -550,8 +944,8 @@ async def analyze_air_quality(
                 }
             },
             "current_conditions": {
-                "latest_pm25": float(aqi_df['y'].iloc[-1]),
-                "predicted_tomorrow": predicted_aqi,
+                "latest_pm25": safe_float(aqi_df['y'].iloc[-1]),
+                "predicted_tomorrow": safe_float(predicted_aqi),
                 "category": aqi_category,
                 "color": aqi_color,
                 "pollutant_levels": current_concentrations
@@ -565,6 +959,7 @@ async def analyze_air_quality(
                 "aqi_value": max_aqi_value
             },
             "health_recommendations": health_recommendations,
+            "model_evaluation": model_metrics,
             "visualizations": {
                 "forecast_plot": forecast_plot,
                 "aqi_gauge": aqi_gauge
@@ -575,25 +970,68 @@ async def analyze_air_quality(
                 "prompt": gemini_prompt
             },
             "summary": {
-                "overall_aqi": max_aqi_value,
-                "overall_category": classify_aqi(max_aqi_value)[0],
+                "overall_aqi": statistics["recent_30_days"]["average"],
+                "overall_category": classify_aqi(statistics["recent_30_days"]["average"])[0],
                 "risk_level": health_recommendations["risk_level"],
-                "trend": trend_direction
+                "trend": trend_direction,
+                "predicted_tomorrow": safe_float(predicted_aqi),
+                "predicted_category": aqi_category,
+                "primary_pollutant": {
+                    "name": max_aqi_pollutant,
+                    "aqi": max_aqi_value
+                } if aqi_breakdown else None
             }
         }
         
+        # Clean the response data to ensure no NaN/inf values
+        response = clean_response_data(response)
+        
+        logger.info("Analysis completed successfully")
         return response
         
+    except HTTPException as he:
+        # Re-raise HTTP exceptions (these are expected errors)
+        logger.warning(f"HTTP Exception in analysis: {he.detail}")
+        raise he
     except Exception as e:
-        logging.error(f"Analysis error: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+        # Log the full exception for debugging
+        logger.error(f"Unexpected error in analysis: {str(e)}", exc_info=True)
+        
+        # Return a structured error response instead of crashing
+        try:
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "status": "error",
+                    "timestamp": datetime.now().isoformat(),
+                    "error": "Internal server error during analysis",
+                    "detail": str(e),
+                    "message": "The analysis could not be completed. Please check your data format and try again."
+                }
+            )
+        except Exception as final_e:
+            # Last resort - return the simplest possible error response
+            logger.error(f"Failed to create error response: {str(final_e)}")
+            return JSONResponse(
+                status_code=500,
+                content={"status": "error", "message": "Critical server error"}
+            )
 
 @app.post("/quick-forecast")
 async def quick_forecast(dataset: UploadFile = File(...)):
     """Quick forecast endpoint for basic AQI prediction"""
     try:
-        df = pd.read_csv(dataset.file)
-        df.columns = df.columns.str.strip()
+        logger.info("Starting quick forecast")
+        
+        try:
+            df = pd.read_csv(dataset.file)
+            df.columns = df.columns.str.strip()
+        except Exception as e:
+            logger.error(f"Error reading CSV in quick-forecast: {str(e)}")
+            raise HTTPException(
+                status_code=400,
+                detail=f"Error reading CSV file: {str(e)}"
+            )
         
         date_col = find_column(df, ['date', 'datetime', 'timestamp'])
         pm25_col = find_column(df, ['pm25', 'pm2.5', 'aqi'])
@@ -601,20 +1039,57 @@ async def quick_forecast(dataset: UploadFile = File(...)):
         if not date_col or not pm25_col:
             raise HTTPException(status_code=400, detail="Required columns not found")
         
-        df[date_col] = pd.to_datetime(df[date_col], dayfirst=True, errors='coerce')
-        aqi_df = df[[date_col, pm25_col]].rename(columns={date_col:'ds', pm25_col:'y'})
-        aqi_df['y'] = pd.to_numeric(aqi_df['y'], errors='coerce')
-        aqi_df = aqi_df.dropna()
+        try:
+            df[date_col] = pd.to_datetime(df[date_col], dayfirst=True, errors='coerce')
+            aqi_df = df[[date_col, pm25_col]].rename(columns={date_col:'ds', pm25_col:'y'})
+            aqi_df['y'] = pd.to_numeric(aqi_df['y'], errors='coerce')
+            aqi_df = aqi_df.dropna()
+            
+            # Sort by date to ensure chronological order
+            aqi_df = aqi_df.sort_values('ds').reset_index(drop=True)
+            
+            if len(aqi_df) == 0:
+                raise HTTPException(
+                    status_code=400,
+                    detail="No valid data found after processing"
+                )
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Error processing data in quick-forecast: {str(e)}")
+            raise HTTPException(
+                status_code=400,
+                detail=f"Error processing data: {str(e)}"
+            )
         
-        model = Prophet()
-        model.fit(aqi_df)
-        
-        future = model.make_future_dataframe(periods=7)  # 7 days for quick forecast
-        forecast = model.predict(future)
+        try:
+            model = Prophet()
+            model.fit(aqi_df)
+            
+            future = model.make_future_dataframe(periods=7)  # 7 days for quick forecast
+            forecast = model.predict(future)
+            
+            # Calculate basic model metrics for quick forecast
+            from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+            
+            historical_forecast = forecast[forecast['ds'].isin(aqi_df['ds'])]
+            actual_values = aqi_df['y'].values
+            predicted_values = historical_forecast['yhat'].values
+            
+            mae = safe_float(mean_absolute_error(actual_values, predicted_values))
+            rmse = safe_float(np.sqrt(mean_squared_error(actual_values, predicted_values)))
+            r2 = safe_float(r2_score(actual_values, predicted_values))
+            
+        except Exception as e:
+            logger.error(f"Error in Prophet forecasting for quick-forecast: {str(e)}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error in forecasting: {str(e)}"
+            )
         
         predictions = []
         for _, row in forecast.tail(7).iterrows():
-            aqi_val = float(row['yhat'])
+            aqi_val = safe_float(row['yhat'])
             category, color = classify_aqi(aqi_val)
             predictions.append({
                 "date": row['ds'].strftime("%Y-%m-%d"),
@@ -623,21 +1098,89 @@ async def quick_forecast(dataset: UploadFile = File(...)):
                 "color": color
             })
         
-        return {
+        response = {
             "status": "success",
             "predictions": predictions,
+            "model_metrics": {
+                "mae": mae,
+                "rmse": rmse,
+                "r2_score": r2
+            },
             "summary": {
                 "next_day_aqi": predictions[0]["predicted_aqi"],
                 "next_day_category": predictions[0]["category"]
             }
         }
         
+        # Clean the response data to ensure no NaN/inf values
+        return clean_response_data(response)
+        
+    except HTTPException as he:
+        logger.warning(f"HTTP Exception in quick-forecast: {he.detail}")
+        raise he
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Quick forecast failed: {str(e)}")
+        logger.error(f"Unexpected error in quick-forecast: {str(e)}", exc_info=True)
+        return JSONResponse(
+            status_code=500,
+            content={
+                "status": "error",
+                "timestamp": datetime.now().isoformat(),
+                "error": "Quick forecast failed",
+                "detail": str(e)
+            }
+        )
 
 @app.get("/health")
 async def health_check():
     return {"status": "healthy", "timestamp": datetime.now().isoformat()}
+
+@app.get("/system-resources")
+async def get_system_resources():
+    """Get current system resources information"""
+    try:
+        disk_info = get_disk_space_info()
+        memory_info = get_memory_info()
+        
+        # Log the request
+        logger.info("System resources requested via API")
+        
+        return {
+            "status": "success",
+            "timestamp": datetime.now().isoformat(),
+            "disk_space": disk_info,
+            "memory": memory_info,
+            "render_info": {
+                "service_name": os.getenv('RENDER_SERVICE_NAME', 'Not available'),
+                "instance_id": os.getenv('RENDER_INSTANCE_ID', 'Not available'),
+                "region": os.getenv('RENDER_REGION', 'Not available')
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting system resources: {str(e)}")
+        return {
+            "status": "error",
+            "timestamp": datetime.now().isoformat(),
+            "error": str(e)
+        }
+
+@app.post("/system-check")
+async def trigger_system_check():
+    """Manually trigger a system resource check and log the results"""
+    try:
+        periodic_system_check()
+        return {
+            "status": "success",
+            "message": "System check completed and logged",
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Error during system check: {str(e)}")
+        return {
+            "status": "error",
+            "message": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
 
 if __name__ == "__main__":
     import uvicorn
