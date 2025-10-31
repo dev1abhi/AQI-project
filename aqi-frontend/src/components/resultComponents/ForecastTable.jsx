@@ -58,7 +58,7 @@ function ForecastTable({ predictions }) {
                 <th className="px-4 py-3 text-left text-teal-400 font-semibold">Date</th>
                 <th className="px-4 py-3 text-left text-teal-400 font-semibold">Predicted AQI</th>
                 <th className="px-4 py-3 text-left text-teal-400 font-semibold">Category</th>
-                <th className="px-4 py-3 text-left text-teal-400 font-semibold">Confidence Range</th>
+                {/* <th className="px-4 py-3 text-left text-teal-400 font-semibold">Confidence Range</th> */}
                 <th className="px-4 py-3 text-left text-teal-400 font-semibold">Haze Level</th>
               </tr>
             </thead>
@@ -73,9 +73,9 @@ function ForecastTable({ predictions }) {
                     <span className={`inline-block w-3 h-3 rounded-full mr-2 ${getAQIColor(p.category)}`}></span>
                     <span className="text-gray-300">{p.category}</span>
                   </td>
-                  <td className="px-4 py-3 text-gray-400 text-sm">
+                  {/* <td className="px-4 py-3 text-gray-400 text-sm">
                     {p.confidence_lower?.toFixed(1)} - {p.confidence_upper?.toFixed(1)}
-                  </td>
+                  </td> */}
                   <td className="px-4 py-3">
                     <div className="flex items-center">
                       <div className="w-16 bg-gray-600 rounded-full h-2 mr-2">
