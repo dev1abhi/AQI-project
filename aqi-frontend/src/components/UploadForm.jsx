@@ -26,20 +26,21 @@ function UploadForm({ setResult, setLoading, setError }) {
     try {
       setLoading(true);
       setResult(null);
-      
+
       const res = await axios.post(
         "https://aqi-app-backend.onrender.com/analyze", // Updated endpoint
         formData,
-        { 
+        {
           headers: { "Content-Type": "multipart/form-data" },
-          timeout: 120000 // 2 minute timeout
+          timeout: 120000, // 2 minute timeout
         }
       );
-      
+
       setResult(res.data);
     } catch (err) {
       console.error(err);
-      const errorMsg = err.response?.data?.detail || err.message || "Analysis failed";
+      const errorMsg =
+        err.response?.data?.detail || err.message || "Analysis failed";
       setError(errorMsg);
     } finally {
       setLoading(false);
@@ -50,21 +51,21 @@ function UploadForm({ setResult, setLoading, setError }) {
     e.preventDefault();
     e.stopPropagation();
     if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(prev => ({ ...prev, [type]: true }));
+      setDragActive((prev) => ({ ...prev, [type]: true }));
     } else if (e.type === "dragleave") {
-      setDragActive(prev => ({ ...prev, [type]: false }));
+      setDragActive((prev) => ({ ...prev, [type]: false }));
     }
   };
 
   const handleDrop = (e, type) => {
     e.preventDefault();
     e.stopPropagation();
-    setDragActive(prev => ({ ...prev, [type]: false }));
-    
+    setDragActive((prev) => ({ ...prev, [type]: false }));
+
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      if (type === 'csv') {
+      if (type === "csv") {
         setDataset(e.dataTransfer.files[0]);
-      } else if (type === 'image') {
+      } else if (type === "image") {
         setRefImage(e.dataTransfer.files[0]);
       }
     }
@@ -73,8 +74,13 @@ function UploadForm({ setResult, setLoading, setError }) {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="text-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-200 mb-2">Upload Your Data</h2>
-        <p className="text-gray-400">CSV dataset is required. Reference image is optional for smog visualization.</p>
+        <h2 className="text-2xl font-bold text-gray-200 mb-2">
+          Upload Your Data
+        </h2>
+        <p className="text-gray-400">
+          CSV dataset is required. Reference image is optional for smog
+          visualization.
+        </p>
       </div>
 
       {/* CSV Upload */}
@@ -85,14 +91,14 @@ function UploadForm({ setResult, setLoading, setError }) {
         </label>
         <div
           className={`relative border-2 border-dashed rounded-xl p-6 transition-all duration-300 ${
-            dragActive.csv 
-              ? 'border-teal-400 bg-teal-400/5' 
-              : 'border-gray-600 hover:border-gray-500'
+            dragActive.csv
+              ? "border-teal-400 bg-teal-400/5"
+              : "border-gray-600 hover:border-gray-500"
           }`}
-          onDragEnter={(e) => handleDrag(e, 'csv')}
-          onDragLeave={(e) => handleDrag(e, 'csv')}
-          onDragOver={(e) => handleDrag(e, 'csv')}
-          onDrop={(e) => handleDrop(e, 'csv')}
+          onDragEnter={(e) => handleDrag(e, "csv")}
+          onDragLeave={(e) => handleDrag(e, "csv")}
+          onDragOver={(e) => handleDrag(e, "csv")}
+          onDrop={(e) => handleDrop(e, "csv")}
         >
           <input
             type="file"
@@ -109,9 +115,12 @@ function UploadForm({ setResult, setLoading, setError }) {
               </div>
             ) : (
               <div>
-                <p className="text-gray-300 font-medium">Drop CSV file here or click to browse</p>
+                <p className="text-gray-300 font-medium">
+                  Drop CSV file here or click to browse
+                </p>
                 <p className="text-sm text-gray-400 mt-1">
-                  Should contain columns: date, pm25 (and optionally pm10, o3, no2, so2, co)
+                  Should contain columns: date, pm25 (and optionally pm10, o3,
+                  no2, so2, co)
                 </p>
               </div>
             )}
@@ -127,14 +136,14 @@ function UploadForm({ setResult, setLoading, setError }) {
         </label>
         <div
           className={`relative border-2 border-dashed rounded-xl p-6 transition-all duration-300 ${
-            dragActive.image 
-              ? 'border-teal-400 bg-teal-400/5' 
-              : 'border-gray-600 hover:border-gray-500'
+            dragActive.image
+              ? "border-teal-400 bg-teal-400/5"
+              : "border-gray-600 hover:border-gray-500"
           }`}
-          onDragEnter={(e) => handleDrag(e, 'image')}
-          onDragLeave={(e) => handleDrag(e, 'image')}
-          onDragOver={(e) => handleDrag(e, 'image')}
-          onDrop={(e) => handleDrop(e, 'image')}
+          onDragEnter={(e) => handleDrag(e, "image")}
+          onDragLeave={(e) => handleDrag(e, "image")}
+          onDragOver={(e) => handleDrag(e, "image")}
+          onDrop={(e) => handleDrop(e, "image")}
         >
           <input
             type="file"
@@ -151,7 +160,9 @@ function UploadForm({ setResult, setLoading, setError }) {
               </div>
             ) : (
               <div>
-                <p className="text-gray-300 font-medium">Drop image here or click to browse</p>
+                <p className="text-gray-300 font-medium">
+                  Drop image here or click to browse
+                </p>
                 <p className="text-sm text-gray-400 mt-1">
                   For smog effect simulation (JPG, PNG, etc.)
                 </p>
