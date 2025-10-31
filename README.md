@@ -1,5 +1,11 @@
 # AQI Smog Forecast Project
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.8+](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Node.js 18+](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-009688.svg)](https://fastapi.tiangolo.com/)
+[![React 19](https://img.shields.io/badge/React-19+-61DAFB.svg)](https://react.dev/)
+
 A comprehensive Air Quality Index (AQI) prediction and visualization application that combines time-series forecasting with intelligent image processing and AI-powered visualization generation.
 
 ## Features

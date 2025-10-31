@@ -1,6 +1,7 @@
 // components/UploadForm.js
 import React, { useState } from "react";
 import axios from "axios";
+import { FileText, Image, Upload, Rocket } from "lucide-react";
 
 function UploadForm({ setResult, setLoading, setError }) {
   const [dataset, setDataset] = useState(null);
@@ -78,8 +79,9 @@ function UploadForm({ setResult, setLoading, setError }) {
 
       {/* CSV Upload */}
       <div className="space-y-2">
-        <label className="block font-medium text-gray-300">
-          📊 Air Quality Dataset (CSV) *
+        <label className="flex items-center gap-2 font-medium text-gray-300">
+          <FileText className="w-5 h-5" />
+          Air Quality Dataset (CSV) *
         </label>
         <div
           className={`relative border-2 border-dashed rounded-xl p-6 transition-all duration-300 ${
@@ -99,9 +101,7 @@ function UploadForm({ setResult, setLoading, setError }) {
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
           />
           <div className="text-center">
-            <div className="w-12 h-12 mx-auto mb-3 text-gray-400">
-              📈
-            </div>
+            <Upload className="w-12 h-12 mx-auto mb-3 text-gray-400" />
             {dataset ? (
               <div>
                 <p className="text-teal-400 font-medium">{dataset.name}</p>
@@ -121,8 +121,9 @@ function UploadForm({ setResult, setLoading, setError }) {
 
       {/* Image Upload */}
       <div className="space-y-2">
-        <label className="block font-medium text-gray-300">
-          🖼️ Reference Image (Optional)
+        <label className="flex items-center gap-2 font-medium text-gray-300">
+          <Image className="w-5 h-5" />
+          Reference Image (Optional)
         </label>
         <div
           className={`relative border-2 border-dashed rounded-xl p-6 transition-all duration-300 ${
@@ -142,9 +143,7 @@ function UploadForm({ setResult, setLoading, setError }) {
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
           />
           <div className="text-center">
-            <div className="w-12 h-12 mx-auto mb-3 text-gray-400">
-              🌆
-            </div>
+            <Image className="w-12 h-12 mx-auto mb-3 text-gray-400" />
             {refImage ? (
               <div>
                 <p className="text-teal-400 font-medium">{refImage.name}</p>
@@ -164,10 +163,11 @@ function UploadForm({ setResult, setLoading, setError }) {
 
       <button
         type="submit"
-        className="w-full bg-gradient-to-r from-teal-500 to-blue-600 hover:from-teal-600 hover:to-blue-700 text-white font-semibold py-4 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+        className="w-full bg-gradient-to-r from-teal-500 to-blue-600 hover:from-teal-600 hover:to-blue-700 text-white font-semibold py-4 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2"
         disabled={!dataset}
       >
-        🚀 Start Analysis
+        <Rocket className="w-5 h-5" />
+        Start Analysis
       </button>
     </form>
   );
