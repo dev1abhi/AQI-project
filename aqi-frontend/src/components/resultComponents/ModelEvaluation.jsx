@@ -65,7 +65,7 @@ function ModelEvaluation({ metrics }) {
     {
       name: "MSE",
       value: metrics.mse?.toFixed(2) || "N/A",
-      unit: "μg/m³²",
+      unit: "µg²/m⁶",
       description: "Mean Squared Error",
       color: "text-indigo-400",
       IconComponent: Square,
