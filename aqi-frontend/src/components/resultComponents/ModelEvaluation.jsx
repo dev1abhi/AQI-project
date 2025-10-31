@@ -1,5 +1,15 @@
 import React from "react";
-import { Target, BarChart3, Ruler, Square, Activity, TrendingUp, CheckCircle, AlertCircle, Info } from "lucide-react";
+import {
+  Target,
+  BarChart3,
+  Ruler,
+  Square,
+  Activity,
+  TrendingUp,
+  CheckCircle,
+  AlertCircle,
+  Info,
+} from "lucide-react";
 
 function ModelEvaluation({ metrics }) {
   if (!metrics) {
@@ -124,7 +134,9 @@ function ModelEvaluation({ metrics }) {
                   {metric.name}
                 </h4>
                 <p className="text-sm text-gray-400">{metric.description}</p>
-                <p className="text-xs text-gray-500 mt-2 italic">{metric.info}</p>
+                <p className="text-xs text-gray-500 mt-2 italic">
+                  {metric.info}
+                </p>
               </div>
             </div>
           );
@@ -143,7 +155,7 @@ function ModelEvaluation({ metrics }) {
         <div className="space-y-4">
           {/* Accuracy Level */}
           <div className="flex items-start space-x-3">
-            <CheckCircle 
+            <CheckCircle
               className={`w-6 h-6 mt-0.5 ${
                 metrics.accuracy_percentage >= 90
                   ? "text-green-400"
@@ -170,7 +182,7 @@ function ModelEvaluation({ metrics }) {
 
           {/* R² Score Interpretation */}
           <div className="flex items-start space-x-3">
-            <CheckCircle 
+            <CheckCircle
               className={`w-6 h-6 mt-0.5 ${
                 metrics.r2_score >= 0.9
                   ? "text-green-400"

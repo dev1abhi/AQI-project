@@ -1,6 +1,17 @@
 // components/Result.js
 import React, { useState } from "react";
-import { LayoutDashboard, TrendingUp, Heart, FlaskConical, BarChart3, Bot, Clipboard, ClipboardCheck, Sparkles, ExternalLink } from "lucide-react";
+import {
+  LayoutDashboard,
+  TrendingUp,
+  Heart,
+  FlaskConical,
+  BarChart3,
+  Bot,
+  Clipboard,
+  ClipboardCheck,
+  Sparkles,
+  ExternalLink,
+} from "lucide-react";
 import CurrentConditions from "./resultComponents/CurrentConditions";
 import ForecastTable from "./resultComponents/ForecastTable";
 import Statistics from "./resultComponents/Statistics";
