@@ -12,3 +12,4 @@ scikit-learn
 Pillow
 requests
 statsmodels
+psutil
