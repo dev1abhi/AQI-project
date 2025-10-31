@@ -259,9 +259,11 @@ Downloads the generated haze-overlaid image.
 
 This project is open source and available under the [MIT License](LICENSE).
 
-## 👨Author
+## Contributors
 
-**dev1abhi** - [GitHub Profile](https://github.com/dev1abhi)
+**Abhilash** 
+**Santhosh** 
+**Saransh** 
 
 ## Acknowledgments
 
@@ -270,7 +272,7 @@ This project is open source and available under the [MIT License](LICENSE).
 - **React + Vite** for modern frontend development
 - **TailwindCSS** for rapid UI development
 - **OpenCV** for image processing capabilities
-- **Render** for deployment platform
+- **Render & Vercel** for deployment platform
 
 ---
 
