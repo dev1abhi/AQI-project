@@ -374,6 +374,7 @@ def apply_atmospheric_effects(image: np.ndarray, aqi_value: float, intensity: in
     
     return np.clip(result, 0, 255).astype(np.uint8)
 
+#can generate this using LLM
 def get_detailed_health_recommendations(aqi_value: float) -> Dict[str, str]:
     """Get comprehensive health recommendations based on AQI"""
     recommendations = {
@@ -479,6 +480,7 @@ def create_forecast_plot(aqi_df: pd.DataFrame, forecast: pd.DataFrame, predicted
     # Ensure predicted_aqi is safe for visualization
     predicted_aqi = safe_float(predicted_aqi)
     
+    #using seaborn
     plt.style.use('seaborn-v0_8')
     fig, axes = plt.subplots(2, 2, figsize=(15, 10))
     
@@ -882,6 +884,8 @@ async def analyze_air_quality(
             img = cv2.imread(img_path)
             if img is not None:
                 haze_intensity = aqi_to_haze_intensity(predicted_aqi)
+
+                # takes the image , applies atmospheric effects based on AQI, and returns the modified image
                 smog_img = apply_atmospheric_effects(img, predicted_aqi, haze_intensity)
                 
                 # Save processed image
