@@ -71,7 +71,7 @@ function Result({ result }) {
             <div className="text-2xl font-bold text-teal-400">
               {result.summary?.overall_aqi?.toFixed(0) || "N/A"}
             </div>
-            <div className="text-sm text-gray-400">Overall AQI</div>
+            <div className="text-sm text-gray-400">Overall AQI (PM2.5) </div>
             <div className="text-xs text-gray-500">
               {result.summary?.overall_category}
             </div>

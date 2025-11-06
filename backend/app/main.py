@@ -682,7 +682,7 @@ async def analyze_air_quality(
             except:
                 df[date_col] = pd.to_datetime(df[date_col], errors='coerce')
             
-            # Prepare data for Prophet
+            # Prepare data for Prophet  (taking pm25 as target variable)
             aqi_df = df[[date_col, pm25_col]].rename(columns={date_col:'ds', pm25_col:'y'})
             aqi_df['y'] = pd.to_numeric(aqi_df['y'], errors='coerce')
             aqi_df = aqi_df.dropna()

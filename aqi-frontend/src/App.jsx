@@ -13,7 +13,7 @@ function App() {
       {/* Header */}
       <div className="text-center mb-8">
         <h1 className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-blue-500 mb-3">
-          AQI Smart Analytics
+          Smart AQI Metrics with Smog Visualization
         </h1>
         <p className="text-gray-400 text-lg max-w-2xl mx-auto">
           Advanced air quality forecasting with multi-parameter analysis, health recommendations, and AI-powered visualizations
